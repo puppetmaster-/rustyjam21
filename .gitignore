@@ -1,0 +1,18 @@
+# dev
+.idea/
+
+# file
+SDL2.dll
+about.hbs
+*.pyxel
+*.bat
+*.url
+*.lch
+*/music/*.wav
+
+# build
+/target
+
+# jam
+/assets
+/www
