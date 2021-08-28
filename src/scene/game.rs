@@ -11,15 +11,15 @@ const OFFSET_CAMERA: f32 = 0.0;
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum GameState {
     WIN,
-    MAP,
+    GAME,
     DEAD,
 }
 
 pub struct Game {
     player: Player,
-    map_texture: Texture2D,
-    map_tilemap: Tilemap,
     tilemaps: HashMap<GameState, Tilemap>,
+    game_texture: Texture2D,
+    game_tilemap: Tilemap,
     camera: Camera2D,
     game_state: GameState,
     init_sidemap: bool,
@@ -28,10 +28,10 @@ pub struct Game {
 
 impl Game {
     pub async fn init() -> Game {
-        let map_texture = get_map_texture();
-        let map_tilemap = get_map_tilemap();
+        let game_texture = get_map_texture();
+        let game_tilemap = get_game_tilemap(&game_texture);
         let mut player = Player::new();
-        player.reset(&map_tilemap);
+        player.reset(&game_tilemap);
 
         let camera = Camera2D {
             zoom: vec2(GAME_ZOOM / screen_width() * 2.0, -GAME_ZOOM / screen_height() * 2.0),
@@ -41,31 +41,28 @@ impl Game {
 
         Game {
             player,
-            map_texture,
-            map_tilemap,
             tilemaps: get_tilemaps(),
+            game_texture,
+            game_tilemap,
             camera,
-            game_state: GameState::MAP,
-            init_sidemap: true,
-            draw_sky: true,
+            game_state: GameState::GAME,
         }
     }
 
     pub fn reset(&mut self) {
-        self.tilemaps = get_tilemaps();
-        self.game_state = GameState::MAP;
-        self.init_sidemap = true;
+        self.game_state = GameState::GAME;
+        self.player.reset(&self.game_tilemap)
     }
 
     pub fn run(&mut self) -> Option<MainState> {
         let mut main_state= None;
-        if let Some(gs) = self.player.update(&mut self.map_tilemap) {
+        if let Some(gs) = self.player.update(&mut self.game_tilemap) {
             match gs {
                 GameState::WIN => {
                     main_state = Some(MainState::END);
                 }
                 GameState::DEAD => {
-                    self.player.reset(&self.map_tilemap);
+                    self.player.reset(&self.game_tilemap);
                 }
                 _ => {
                     self.game_state = gs;
@@ -75,7 +72,7 @@ impl Game {
         }
         update_camera(self, self.player.position());
         set_camera(&self.camera);
-        self.map_tilemap.draw(self.map_texture, vec2(0.0, 0.0), None);
+        self.game_tilemap.draw(self.game_texture, vec2(0.0, 0.0), None);
         self.player.draw();
         main_state
     }
@@ -94,10 +91,11 @@ fn get_map_texture() -> Texture2D {
     texture
 }
 
-fn get_map_tilemap() -> Tilemap {
+fn get_game_tilemap(texture2d: &Texture2D) -> Tilemap {
     let tiles_json_vec = include_bytes!("../../assets/maps/game.json").to_vec();
     let tileset_image_rect = Rect::new(0.0,0.0,64.0,64.0);
     let mut tilemap = Tilemap::from_pyxeledit(tileset_image_rect,String::from_utf8(tiles_json_vec).unwrap().as_str());
+    tilemap.set_tile_rectangles_from(texture2d);
     tilemap.visibility(tilemap.get_layer_id("logic"), false);
     tilemap.visibility(tilemap.get_layer_id("collision"), false);
     tilemap

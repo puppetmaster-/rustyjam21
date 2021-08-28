@@ -48,6 +48,11 @@ impl Tilemap {
         }
     }
 
+    pub fn set_tile_rectangles_from(&mut self, texture2d: &Texture2D){
+        self.tile_rectangles = get_tile_rectangles(
+            Rect::new(0.0,0.0,texture2d.width(),texture2d.height()),
+            self.tile_width, self.tile_height);
+    }
     /// just a map with tile ids
     /// neither rotation nor flipping
     pub fn set_tiles_from_map(&mut self, layer: usize, list: &[Vec<u32>]) {
@@ -190,14 +195,15 @@ impl Tilemap {
             || position.x > self.viewport.x + self.viewport.w
             || position.y > self.viewport.y + self.viewport.h)
     }
-    pub fn get_clip_from_id(&self, id: u32) -> Rect {
-        self.tile_rectangles[&id]
+
+    pub fn get_rect_from_id(&self, id: u32) -> Rect {
+        self.tile_rectangles.as_ref().unwrap()[&id]
     }
 
     pub fn get_frames_from_ids(&self, ids: &[u32]) -> Vec<Rect> {
         let mut frames = Vec::with_capacity(ids.len());
         for id in ids {
-            frames.push(self.tile_rectangles[&(id)]);
+            frames.push(self.tile_rectangles.as_ref().unwrap()[&(id)]);
         }
         frames
     }
@@ -230,6 +236,7 @@ impl Tilemap {
         };
         self.layers.push(layer);
     }
+
     pub fn draw(&self, texture: Texture2D, position: Vec2, layer_to_draw: Option<usize>) {
         for (i, layer) in self.layers.iter().enumerate() {
             if layer.visibility && layer_to_draw.is_none() || layer_to_draw.is_some() && i == layer_to_draw.unwrap() {
@@ -245,7 +252,7 @@ impl Tilemap {
                                 layer.color,
                                 DrawTextureParams {
                                     dest_size: Some(tile.dest_size),
-                                    source: Some(self.tile_rectangles[&tile.id]),
+                                    source: Some(self.get_rect_from_id(tile.id)),
                                     rotation: tile.rotation,
                                     pivot: None,
                                     ..Default::default()
@@ -271,7 +278,7 @@ pub struct Tilemap {
     tile_height: i32,
     tile_width: i32,
     layers: Vec<Layer>,
-    tile_rectangles: HashMap<u32, Rect>,
+    tile_rectangles: Option<HashMap<u32, Rect>>,
     layer_to_draw: i64,
 }
 
@@ -295,7 +302,7 @@ pub struct Tile {
     dest_size: Vec2,
 }
 
-fn get_tile_rectangles(clip: Rect, tile_width: i32, tile_height: i32) -> HashMap<u32, Rect> {
+fn get_tile_rectangles(clip: Rect, tile_width: i32, tile_height: i32) -> Option<HashMap<u32, Rect>> {
     let mut id = 0;
     let x = clip.w as i32 / tile_width;
     let y = clip.h as i32 / tile_height;
@@ -312,7 +319,7 @@ fn get_tile_rectangles(clip: Rect, tile_width: i32, tile_height: i32) -> HashMap
             id += 1;
         }
     }
-    tile_rectangles
+    Some(tile_rectangles)
 }
 
 fn transform_pyxeltilemap(clip: Rect, pyxeltilemap: PyxelTilemap) -> Tilemap {
