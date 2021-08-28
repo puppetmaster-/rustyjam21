@@ -1,7 +1,7 @@
 use crate::{MainState, FONT_COLOR, TITLE_ZOOM};
 use macroquad::prelude::*;
 use quad_snd::decoder;
-use quad_snd::mixer::{SoundMixer, Volume};
+use quad_snd::mixer::{SoundMixer, Volume, SoundId};
 
 const MUSIC_BYTES: &[u8] = include_bytes!("../../assets/music/end.ogg");
 
@@ -10,6 +10,7 @@ pub struct End {
     font: Font,
     text1: Vec<String>,
     start: bool,
+    sound_id: Option<SoundId>,
 }
 
 impl End {
@@ -28,6 +29,7 @@ impl End {
             font: font.unwrap(),
             text1, 
             start: true,
+            sound_id: None
         }
     }
 
@@ -36,6 +38,7 @@ impl End {
             let id = mixer.play(decoder::read_ogg(MUSIC_BYTES).unwrap());
             mixer.set_volume(id, Volume(0.6));
             self.start = false;
+            self.sound_id = Some(id);
         }
         update_camera(self, vec2(0.0, 0.0));
         set_camera(&self.camera);
@@ -57,6 +60,7 @@ impl End {
         }
 
         if get_last_key_pressed().is_some() {
+            mixer.stop(self.sound_id.unwrap());
             return Some(MainState::TITLE);
         }
         None

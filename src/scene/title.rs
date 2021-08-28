@@ -2,12 +2,13 @@ use crate::{MainState, GAME_ZOOM};
 use macroquad::prelude::*;
 use macroquad::texture::Texture2D;
 use quad_snd::decoder;
-use quad_snd::mixer::{Volume, SoundMixer};
+use quad_snd::mixer::{Volume, SoundMixer, SoundId};
 
 pub struct Title {
     title: Texture2D,
     camera: Camera2D,
     start: bool,
+    sound_id: Option<SoundId>,
 }
 
 const MUSIC_BYTES: &[u8] = include_bytes!("../../assets/music/start.ogg");
@@ -27,20 +28,31 @@ impl Title {
             camera,
             title,
             start: true,
+            sound_id: None,
         }
     }
 
     pub fn run(&mut self,mixer: &mut SoundMixer) -> Option<MainState> {
         if self.start {
-            let id = mixer.play(decoder::read_ogg(MUSIC_BYTES).unwrap());
-            mixer.set_volume(id, Volume(0.6));
+            let sound_id = mixer.play(decoder::read_ogg(MUSIC_BYTES).unwrap());
+            mixer.set_volume(sound_id, Volume(0.6));
             self.start = false;
+            self.sound_id = Some(sound_id);
         }
         update_camera(self, vec2(0.0, 0.0));
         set_camera(&self.camera);
         draw_texture_ex(self.title ,0.0, 0.0, WHITE, Default::default());
         set_default_camera();
-        process_action(self)
+        match process_action(self){
+            None => {None}
+            Some(state) => {
+                mixer.stop((self.sound_id.unwrap()));
+                Some(state)
+            }
+        }
+    }
+    pub fn reset(&mut self){
+        self.start = true;
     }
 }
 
