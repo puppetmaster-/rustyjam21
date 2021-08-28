@@ -17,13 +17,10 @@ pub enum GameState {
 
 pub struct Game {
     player: Player,
-    tilemaps: HashMap<GameState, Tilemap>,
     game_texture: Texture2D,
     game_tilemap: Tilemap,
     camera: Camera2D,
     game_state: GameState,
-    init_sidemap: bool,
-    draw_sky: bool,
 }
 
 impl Game {
@@ -41,7 +38,6 @@ impl Game {
 
         Game {
             player,
-            tilemaps: get_tilemaps(),
             game_texture,
             game_tilemap,
             camera,
@@ -99,9 +95,4 @@ fn get_game_tilemap(texture2d: &Texture2D) -> Tilemap {
     tilemap.visibility(tilemap.get_layer_id("logic"), false);
     tilemap.visibility(tilemap.get_layer_id("collision"), false);
     tilemap
-}
-
-fn get_tilemaps() -> HashMap<GameState, Tilemap> {
-    let mut tilemaps = HashMap::new();
-    tilemaps
 }

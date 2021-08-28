@@ -11,8 +11,6 @@ use quad_snd::mixer::{Sound, SoundMixer};
 use std::collections::HashMap;
 use std::time::Duration;
 
-//const EXIT: u32 = 510;
-
 const JUMP_UP_FACTOR: f32 = 14.0;
 const JUMP_DOWN_FACTOR: f32 = 12.0;
 const JUMP_UP_CURVE: [f32; 12] = [8.0, 16.0, 13.0, 10.0,8.0, 7.0,6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
