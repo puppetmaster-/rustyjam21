@@ -8,25 +8,32 @@ use macroquad::prelude::*;
 
 use crate::scene::title::Title;
 use crate::scene::game::Game;
+use crate::scene::end::End;
+
 use std::time::Duration;
 use macroquad::prelude::scene::clear;
 use miniquad::gl::glClearColor;
+use quad_snd::mixer::SoundMixer;
 
 const BACKGROUND_COLOR: Color = color_u8!(202, 202, 202, 255);
+const FONT_COLOR: Color = color_u8!(202, 202, 202, 255);
 const GAME_ZOOM: f32 = 6.0;
-const DEBUG: bool = true;
+const TITLE_ZOOM: f32 = 1.0;
+const DEBUG: bool = false;
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut main_state = MainState::GAME;
+    let mut main_state = MainState::TITLE;
     let mut title = Title::init().await;
     let mut game = Game::init().await;
+    let mut end = End::init().await;
+    let mut mixer = SoundMixer::new();
     loop {
         clear_background(BLACK);
         match main_state {
             MainState::EXIT => break,
             MainState::TITLE => {
-                if let Some(gs) = title.run() {
+                if let Some(gs) = title.run(&mut mixer) {
                     main_state = gs
                 }
             }
@@ -35,10 +42,16 @@ async fn main() {
                     main_state = gs
                 }
             }
+            MainState::END => {
+                if let Some(gs) = end.run(&mut mixer) {
+                    main_state = gs
+                }
+            }
             _ => {}
         }
+        mixer.frame();
         next_frame().await;
-        std:: thread ::sleep(Duration::from_millis(10));
+        //std:: thread ::sleep(Duration::from_millis(10));
     }
 }
 
