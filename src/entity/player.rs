@@ -312,7 +312,7 @@ impl Player {
             self.position.x = new_x;
             self.position.y = new_y;
 
-            let id_head = tilemap.get_id_at_position(tilemap.get_layer_id("logic"), self.position() + vec2(RAY_HEAD.0,RAY_HEAD.1-self.duck_distance));
+            let id_head = tilemap.get_id_at_position(tilemap.get_layer_id("logic"), self.position() + vec2(RAY_HEAD.0,RAY_HEAD.1 + self.duck_distance));
             let id_feet = tilemap.get_id_at_position(tilemap.get_layer_id("logic"), self.position() + Vec2::from(RAY_FEET));
 
             // kill logic
