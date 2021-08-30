@@ -262,7 +262,8 @@ impl Player {
                         self.state = State::AIR;
                     }
                     self.jump_up_timer += 1;
-                    let y = JUMP_UP_FACTOR * JUMP_UP_CURVE[self.jump_up_timer] * delta;
+                    let factor = if self.is_crouched(){JUMP_UP_FACTOR / 2.0} else {JUMP_UP_FACTOR};
+                    let y = factor * JUMP_UP_CURVE[self.jump_up_timer] * delta;
                     if can_jump_up(vec2(new_x, new_y - y),tilemap,self.duck_distance){
                         new_y = new_y - y;
                     }
