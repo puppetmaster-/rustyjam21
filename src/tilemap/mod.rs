@@ -53,15 +53,6 @@ impl Tilemap {
             Rect::new(0.0,0.0,texture2d.width(),texture2d.height()),
             self.tile_width, self.tile_height);
     }
-    /// just a map with tile ids
-    /// neither rotation nor flipping
-    pub fn set_tiles_from_map(&mut self, layer: usize, list: &[Vec<u32>]) {
-        let tiles = self.create_tiles_from_map(list);
-        match self.layers.get_mut(layer) {
-            None => self.add_layer(tiles),
-            Some(layer) => layer.tiles = tiles,
-        }
-    }
 
     pub fn viewport(&mut self, rectangle: Rect) -> &Tilemap {
         self.viewport = rectangle;
@@ -260,7 +251,6 @@ impl Tilemap {
                             );
                             if DEBUG {
                                 draw_rectangle_lines(tmp_pos.x, tmp_pos.y, 8.0, 8.0, 0.1, GREEN);
-                                //draw_circle(tmp_pos.x(), tmp_pos.y(),0.5, RED); //low fps
                             }
                         }
                     }
@@ -279,6 +269,7 @@ pub struct Tilemap {
     tile_width: i32,
     layers: Vec<Layer>,
     tile_rectangles: Option<HashMap<u32, Rect>>,
+
     layer_to_draw: i64,
 }
 
