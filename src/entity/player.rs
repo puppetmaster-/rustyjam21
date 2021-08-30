@@ -74,6 +74,10 @@ pub enum AnimState {
     RUN_DUCK_RIGHT,
     STAND_DUCK_LEFT,
     STAND_DUCK_RIGHT,
+    AIR_UP,
+    AIR_UP_DUCK,
+    AIR_DOWN,
+    AIR_DOWN_DUCK,
     AIR_UP_LEFT,
     AIR_UP_DUCK_LEFT,
     AIR_UP_RIGHT,
@@ -152,7 +156,6 @@ impl Player {
         let mut new_y = self.position.y;
 
         if self.state == State::KILL && get_last_key_pressed().is_some() {
-            self.timer.restart();
             gamestate = Some(GameState::DEAD);
         }
         if self.state == State::WIN {
@@ -172,7 +175,7 @@ impl Player {
                     if self.state != State::AIR {
                         self.state = State::RUN;
                     }
-                    self.direction = vec2(0.0, 0.0);
+                    self.direction = vec2(-1.0, 0.0);
                     new_x = self.position.x - distance;
                     if self.moving_timer < MOVE_SPEED_CURVE.len() - 1 {
                         self.moving_timer += 1;
@@ -256,6 +259,7 @@ impl Player {
                     if self.jump_state == JumpState::NOT {
                         self.mixer.play(self.jump_sound.clone());
                         self.jump_state = JumpState::BUILD_UP;
+                        self.state = State::AIR;
                     }
                     self.jump_up_timer += 1;
                     let y = JUMP_UP_FACTOR * JUMP_UP_CURVE[self.jump_up_timer] * delta;
@@ -263,12 +267,14 @@ impl Player {
                         new_y = new_y - y;
                     }
                 } else {
+                    self.state = State::AIR;
                     self.jump_state = JumpState::UP;
                 }
             }
 
             //stop jumping
             if (!is_key_down(KeyCode::Space) && !is_key_down(KeyCode::Up)) && self.jump_state == JumpState::BUILD_UP {
+                self.state = State::AIR;
                 self.jump_state = JumpState::UP;
             }
 
@@ -296,7 +302,11 @@ impl Player {
                 } else {
                     self.jump_down_timer = 0;
                     self.jump_up_timer = 0;
-                    self.state = State::SLIDE;
+                    if self.facing == Facing::CAMERA{
+                        self.state = State::STAND;
+                    }else{
+                        self.state = State::SLIDE;
+                    }
                     self.jump_state = JumpState::NOT
                 }
             }
@@ -386,13 +396,13 @@ impl Player {
     }
     pub fn reset(&mut self, tilemap: &Tilemap){
         self.state = State::IDLE;
+        self.animation_state = AnimState::IDLE;
         self.jump_timer = 0;
         self.moving_timer = 0;
         self.break_timer = BREAK_SPEED_CURVE.len();
         self.need_reset = false;
         self.timer.restart();
         self.position = tilemap.get_all_position_from_id(tilemap.get_layer_id("logic"),2)[0];
-        self.animation_state = AnimState::IDLE;
         self.facing = Facing::CAMERA;
         for (_, a) in self.animations.iter_mut() {
             a.reset();
@@ -402,30 +412,36 @@ impl Player {
         return match self.state {
             State::SLIDE => {
                 if self.facing == Facing::LEFT {
-                    if self.duck_distance > 0.0 {
+                    if self.is_crouched() {
                         return AnimState::RUN_DUCK_LEFT;
                     }
                     return AnimState::RUN_LEFT;
                 }
-                if self.duck_distance > 0.0 {
-                    return AnimState::RUN_DUCK_RIGHT;
+                if self.facing == Facing::RIGHT {
+                    if self.is_crouched() {
+                        return AnimState::RUN_DUCK_RIGHT;
+                    }
+                    return AnimState::RUN_RIGHT;
                 }
-                AnimState::RUN_RIGHT
+                if self.is_crouched() {
+                    return AnimState::IDLE_DUCK;
+                }
+                AnimState::IDLE
             }
             State::IDLE => {
-                if self.duck_distance > 0.0 {
+                if self.is_crouched() {
                     return AnimState::IDLE_DUCK;
                 }
                 AnimState::IDLE
             }
             State::RUN => {
                 if self.facing == Facing::LEFT {
-                    if self.duck_distance > 0.0 {
+                    if self.is_crouched() {
                         return AnimState::RUN_DUCK_LEFT;
                     }
                     return AnimState::RUN_LEFT;
                 }
-                if self.duck_distance > 0.0 {
+                if self.is_crouched() {
                     return AnimState::RUN_DUCK_RIGHT;
                 }
                 AnimState::RUN_RIGHT
@@ -435,47 +451,68 @@ impl Player {
             }
             State::STAND => {
                 if self.facing == Facing::LEFT {
-                    if self.duck_distance > 0.0 {
+                    if self.is_crouched() {
                         return AnimState::STAND_DUCK_LEFT;
                     }
                     return AnimState::STAND_LEFT;
                 }
-                if self.duck_distance > 0.0 {
-                    return AnimState::STAND_DUCK_RIGHT;
+                if self.facing == Facing::RIGHT {
+                    if self.is_crouched() {
+                        return AnimState::STAND_DUCK_RIGHT;
+                    }
+                    return AnimState::STAND_RIGHT;
                 }
-                AnimState::STAND_RIGHT
+                if self.is_crouched() {
+                    return AnimState::IDLE_DUCK;
+                }
+                AnimState::IDLE
             }
             State::AIR => {
                 if self.facing == Facing::LEFT {
-                    if self.jump_state == JumpState::UP {
-                        if self.duck_distance > 0.0 {
+                    return if self.jump_state == JumpState::UP {
+                        if self.is_crouched() {
                             return AnimState::AIR_UP_DUCK_LEFT;
                         }
-                        return AnimState::AIR_UP_LEFT;
+                        AnimState::AIR_UP_LEFT
                     } else { // down
-                        if self.duck_distance > 0.0 {
+                        if self.is_crouched() {
                             return AnimState::AIR_DOWN_DUCK_LEFT;
                         }
-                        return AnimState::AIR_DOWN_LEFT;
+                        AnimState::AIR_DOWN_LEFT
                     }
-                }else { // right
-                    if self.jump_state == JumpState::UP {
-                        if self.duck_distance > 0.0 {
+                }
+                if self.facing == Facing::RIGHT{
+                    return if self.jump_state == JumpState::UP {
+                        if self.is_crouched() {
                             return AnimState::AIR_UP_DUCK_RIGHT;
                         }
-                        return AnimState::AIR_UP_RIGHT;
+                        AnimState::AIR_UP_RIGHT
                     } else { // down
-                        if self.duck_distance > 0.0 {
+                        if self.is_crouched() {
                             return AnimState::AIR_DOWN_DUCK_RIGHT;
                         }
-                        return AnimState::AIR_DOWN_RIGHT;
+                        AnimState::AIR_DOWN_RIGHT
                     }
+                }
+                return if self.jump_state == JumpState::UP {
+                    if self.is_crouched() {
+                        return AnimState::AIR_UP_DUCK;
+                    }
+                    AnimState::AIR_UP
+                } else { // down
+                    if self.is_crouched() {
+                        return AnimState::AIR_DOWN_DUCK;
+                    }
+                    AnimState::AIR_DOWN
                 }
             }
             State::WIN => {
                 return AnimState::IDLE;
             }
         }
+    }
+    pub fn is_crouched(&self) -> bool{
+        self.duck_distance > 0.0
     }
 }
 
@@ -557,7 +594,12 @@ fn get_animations() -> HashMap<AnimState, TileAnim> {
     hashmap.insert(AnimState::AIR_DOWN_LEFT, TileAnim::new(&player_tilemap, &[52, 52], vec![Duration::from_millis(80)]), );
     hashmap.insert(AnimState::AIR_DOWN_DUCK_LEFT, TileAnim::new(&player_tilemap, &[54, 54], vec![Duration::from_millis(80)]), );
 
-    hashmap.insert(AnimState::DEAD, TileAnim::new(&player_tilemap, &[56, 56], vec![Duration::from_millis(500)]));
+    hashmap.insert(AnimState::AIR_UP, TileAnim::new(&player_tilemap, &[56, 56], vec![Duration::from_millis(80)]), );
+    hashmap.insert(AnimState::AIR_UP_DUCK, TileAnim::new(&player_tilemap, &[58, 58], vec![Duration::from_millis(80)]), );
+    hashmap.insert(AnimState::AIR_DOWN, TileAnim::new(&player_tilemap, &[60, 60], vec![Duration::from_millis(80)]), );
+    hashmap.insert(AnimState::AIR_DOWN_DUCK, TileAnim::new(&player_tilemap, &[62, 62], vec![Duration::from_millis(80)]), );
+
+    hashmap.insert(AnimState::DEAD, TileAnim::new(&player_tilemap, &[63, 63], vec![Duration::from_millis(500)]));
 
     hashmap
 }
