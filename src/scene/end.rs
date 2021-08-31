@@ -1,7 +1,7 @@
 use crate::{MainState, FONT_COLOR, TITLE_ZOOM};
 use macroquad::prelude::*;
 use quad_snd::decoder;
-use quad_snd::mixer::{SoundMixer, Volume, SoundId};
+use quad_snd::mixer::{SoundMixer, Volume, SoundId, PlaybackStyle};
 
 const MUSIC_BYTES: &[u8] = include_bytes!("../../assets/music/end.ogg");
 
@@ -20,9 +20,8 @@ impl End {
             target: vec2(0.0, 0.0),
             ..Default::default()
         };
-        // todo write end text
-        let font = load_ttf_font_from_bytes(include_bytes!("../../assets/fonts/GothicPixels.ttf"));
-        let t1 = "You have found the exit!\n\nThe world with all its illusions\nis waiting for you.\n\nThanks for playing my game.\n\n";
+        let font = load_ttf_font_from_bytes(include_bytes!("../../assets/fonts/Born2bSportyAkan.ttf"));
+        let t1 = "You have found the exit!\n\nThe world with all its illusions\nis waiting for you.\n\nThanks for playing.\n\n";
         let text1 = t1.to_string().split('\n').map(String::from).collect();
         End { 
             camera, 
@@ -35,7 +34,9 @@ impl End {
 
     pub fn run(&mut self, mixer: &mut SoundMixer) -> Option<MainState> {
         if self.start {
-            let id = mixer.play(decoder::read_ogg(MUSIC_BYTES).unwrap());
+            let mut sound  = decoder::read_ogg(MUSIC_BYTES).unwrap();
+            sound.playback_style = PlaybackStyle::Looped;
+            let id = mixer.play(sound);
             mixer.set_volume(id, Volume(0.6));
             self.start = false;
             self.sound_id = Some(id);
@@ -53,8 +54,8 @@ impl End {
         for (i, line) in self.text1.iter().enumerate() {
             draw_text_ex(
                 line,
-                (screen_width() / 2.0) - 350.0,
-                (screen_height() / 2.0) - 350.0 + i as f32 * 80.0,
+                (screen_width() / 2.0) - 220.0,
+                (screen_height() / 2.0) - 220.0 + i as f32 * 80.0,
                 tp,
             );
         }

@@ -1,11 +1,7 @@
 use crate::entity::player::Player;
 use crate::tilemap::Tilemap;
-use crate::utils::tween::Tween;
-use crate::{MainState, GAME_ZOOM, BACKGROUND_COLOR};
+use crate::{MainState, GAME_ZOOM};
 use macroquad::prelude::*;
-use std::collections::HashMap;
-
-const OFFSET_CAMERA: f32 = 0.0;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
