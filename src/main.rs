@@ -3,21 +3,20 @@ mod scene;
 mod tilemap;
 mod utils;
 
-use macroquad::prelude::*;
+use macroquad::{audio, prelude::*};
 
 use crate::scene::title::Title;
 use crate::scene::game::Game;
 use crate::scene::end::End;
-
-use quad_snd::decoder;
-use quad_snd::mixer::{Volume, SoundMixer, PlaybackStyle};
+use macroquad::audio::PlaySoundParams;
 
 const FONT_COLOR: Color = color_u8!(202, 202, 202, 255);
 const GAME_ZOOM: f32 = 6.0;
 const TITLE_ZOOM: f32 = 6.0;
 const DEBUG: bool = false;
 
-const MUSIC_BYTES: &[u8] = include_bytes!("../assets/music/start.ogg");
+const MUSIC_START_BYTES: &[u8] = include_bytes!("../assets/music/start.ogg");
+const MUSIC_END_BYTES: &[u8] = include_bytes!("../assets/music/end.ogg");
 
 #[macroquad::main(window_conf)]
 async fn main() {
@@ -25,11 +24,9 @@ async fn main() {
     let mut title = Title::init().await;
     let mut game = Game::init().await;
     let mut end = End::init().await;
-    let mut mixer = SoundMixer::new();
-    let mut sound = decoder::read_ogg(MUSIC_BYTES).unwrap();
-    sound.playback_style = PlaybackStyle::Looped;
-    let sound_id = mixer.play(sound);
-    mixer.set_volume(sound_id, Volume(0.6));
+    let music_start = audio::load_sound_from_bytes(MUSIC_START_BYTES).await.unwrap();
+    let music_end  = audio::load_sound_from_bytes(MUSIC_END_BYTES).await.unwrap();
+    audio::play_sound(music_start,PlaySoundParams{ looped: true, volume: 0.1 });
     loop {
         clear_background(BLACK);
         match main_state {
@@ -45,14 +42,17 @@ async fn main() {
             MainState::GAME => {
                 if let Some(gs) = game.run() {
                     if gs == MainState::END {
-                        mixer.stop(sound_id);
+                        audio::stop_sound(music_start);
+                        audio::play_sound(music_end,PlaySoundParams{ looped: true, volume: 0.1 });
                     }
                     main_state = gs
                 }
             }
             MainState::END => {
-                if let Some(gs) = end.run(&mut mixer) {
+                if let Some(gs) = end.run() {
                     if gs == MainState::TITLE {
+                        audio::stop_sound(music_end);
+                        audio::play_sound(music_start,PlaySoundParams{ looped: true, volume: 0.1 });
                         title.reset();
                     }
                     main_state = gs
@@ -60,7 +60,6 @@ async fn main() {
             }
             _ => {}
         }
-        mixer.frame();
         next_frame().await;
         //std:: thread ::sleep(Duration::from_millis(10));
     }

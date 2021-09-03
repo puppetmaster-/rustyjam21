@@ -3,12 +3,11 @@ use crate::tilemap::tile_animation::TileAnim;
 use crate::tilemap::Tilemap;
 use crate::utils::timer::Timer;
 use crate::DEBUG;
-use macroquad::prelude::*;
+use macroquad::{audio, prelude::*};
 use macroquad::texture::Texture2D;
-use quad_snd::decoder;
-use quad_snd::mixer::{Sound, SoundMixer};
 use std::collections::HashMap;
 use std::time::Duration;
+use macroquad::audio::Sound;
 
 const JUMP_UP_FACTOR: f32 = 14.0;
 const JUMP_DOWN_FACTOR: f32 = 12.0;
@@ -111,12 +110,10 @@ pub struct Player {
     timer: Timer,
     jump_sound: Sound,
     dead_sound: Sound,
-    mixer: SoundMixer,
-
 }
 
 impl Player {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         let spritesheet = get_player_spritesheet();
         let animations = get_animations();
         Self {
@@ -138,9 +135,8 @@ impl Player {
             facing: Facing::Camera,
             animations,
             timer: Timer::new_sec(1),
-            jump_sound: decoder::read_wav(JUMP_SOUND_BYTES).unwrap(),
-            dead_sound: decoder::read_wav(DEAD_SOUND_BYTES).unwrap(),
-            mixer: SoundMixer::new(),
+            jump_sound: audio::load_sound_from_bytes(JUMP_SOUND_BYTES).await.unwrap(),
+            dead_sound: audio::load_sound_from_bytes(DEAD_SOUND_BYTES).await.unwrap(),
         }
     }
     pub fn update(&mut self, tilemap: &mut Tilemap) -> Option<GameState> {
@@ -256,7 +252,7 @@ impl Player {
             if (is_key_down(KeyCode::Space) || is_key_down(KeyCode::Up)) && (self.jump_state == JumpState::BuildUp || self.jump_state == JumpState::Not) {
                 if self.jump_up_timer < JUMP_UP_CURVE.len() - 1 {
                     if self.jump_state == JumpState::Not {
-                        self.mixer.play(self.jump_sound.clone());
+                        audio::play_sound_once(self.jump_sound);
                         self.jump_state = JumpState::BuildUp;
                         self.state = State::AIR;
                     }
@@ -329,7 +325,7 @@ impl Player {
             match id_feet {
                 Some(id) => match id {
                     3 => {
-                        self.mixer.play(self.dead_sound.clone());
+                        audio::play_sound_once(self.dead_sound);
                         self.state = State::KILL;
                     }
                     1 => {
@@ -342,7 +338,7 @@ impl Player {
             match id_head {
                 Some(id) => match id {
                     3 => {
-                        self.mixer.play(self.dead_sound.clone());
+                        audio::play_sound_once(self.dead_sound);
                         self.state = State::KILL;
                     },
                     _ => {}
@@ -359,7 +355,6 @@ impl Player {
             self.animations.get_mut(&old_animationstate).unwrap().repeating = false;
             self.animations.get_mut(&self.animation_state).unwrap().repeating = true;
         }
-        self.mixer.frame();
         gamestate
     }
     pub fn position(&self) -> Vec2 {

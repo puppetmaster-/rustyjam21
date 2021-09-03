@@ -23,7 +23,7 @@ impl Game {
     pub async fn init() -> Game {
         let game_texture = get_map_texture();
         let game_tilemap = get_game_tilemap(&game_texture);
-        let mut player = Player::new();
+        let mut player = Player::new().await;
         player.reset(&game_tilemap);
 
         let camera = Camera2D {
